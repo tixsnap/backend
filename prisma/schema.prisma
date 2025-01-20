@@ -1,0 +1,218 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ORGANIZER
+}
+
+model User {
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+
+  totalRating Float?
+
+  role Role
+
+  referralCode String @unique
+
+  profile         Profile?
+  resetToken      PasswordResetToken[]
+  events          Event[]
+  transactions    Transaction[]
+  reviews         Review[]
+  ratings         Rating[]
+  couponsReferral CouponReferral?
+  point           Point?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users") // nama table
+}
+
+enum TicketType {
+  FREE
+  PAID
+}
+
+model CouponReferral {
+  id     String @id
+  user   User   @relation(fields: [id], references: [id])
+  userId String
+
+  couponName String @unique
+  totalValue Float // 10k 
+
+  createdAt  DateTime @default(now())
+  validUntil DateTime // 3 months after submitting referral
+
+  @@map("coupon_referrals")
+}
+
+model Event {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  price         Float
+  startDate     DateTime
+  endDate       DateTime
+  availableSeat Int?
+  ticketOpen    Int
+  description   String?
+  location      String?
+  category      String?
+  totalAttendee Int?
+
+  ticketSold Int?
+  ticketType TicketType
+
+  isAttended Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  voucher   Voucher? @relation(fields: [voucherId], references: [id])
+  voucherId String
+
+  reviews Review[]
+  ratings Rating[]
+
+  @@map("events")
+}
+
+model Review {
+  id String @id @default(uuid())
+
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reviews")
+}
+
+model Rating {
+  id String @id @default(uuid())
+
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  rating Float
+
+  @@map("ratings")
+}
+
+model Voucher {
+  id           String   @id @default(uuid())
+  name         String
+  totalVoucher Float
+  startFrom    DateTime
+  validUntil   DateTime
+
+  events Event[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("Vouchers")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@map("password_reset_tokens")
+}
+
+model Profile {
+  id   String @id
+  user User   @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  firstName      String?
+  lastName       String?
+  profilePicture String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profiles")
+}
+
+enum StatusTransaction {
+  WAITING_PAYMENT
+  WAITING_FOR_CONFIRMATION
+  DONE
+  REJECTED
+  EXPIRED
+  CANCELED
+}
+
+model Transaction {
+  id           String        @id @default(uuid())
+  totalPayment Float
+  paymentProof PaymentProof?
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  status StatusTransaction
+
+  validUntilPaymentProof DateTime //2h after checkout
+  validUntilConfirmation DateTime //3d after proof
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("transactions")
+}
+
+model PaymentProof {
+  id             String      @id
+  transaction    Transaction @relation(fields: [id], references: [id], onDelete: Cascade)
+  paymentPicture String?
+
+  createdAt DateTime @default(now())
+
+  @@map("payment_proofs")
+}
+
+model Point {
+  id   String @id
+  user User   @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  totalPoint Int //10k every refferal member
+  validUntil DateTime // 3 month after newest invited people
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("points")
+}
