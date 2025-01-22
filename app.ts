@@ -1,6 +1,9 @@
 import express, { Application, NextFunction, Request, Response } from "express";
 import cors from "cors";
 
+// routes
+import { authRouter } from "./src/routes/authRouter";
+
 export class App {
   private app: Application;
 
@@ -19,7 +22,9 @@ export class App {
   }
 
   // routes configuration
-  private routes() {}
+  private routes() {
+    this.app.use("/auth", authRouter());
+  }
 
   // handler configuration
   private handleError() {
