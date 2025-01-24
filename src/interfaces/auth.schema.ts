@@ -20,3 +20,16 @@ export const registerSchema = z
     message: "Password mush match with password",
     path: ["confirmPassword"],
   });
+
+export const loginSchema = z.object({
+  email: z.string().email().nonempty(),
+  password: z
+    .string()
+    .min(6)
+    .max(10)
+    .regex(new RegExp("^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9]).{6,}$"), {
+      message:
+        "Password must be at least 6 characters and contain an uppercase letter, lowercase letter, and number",
+    })
+    .nonempty(),
+});

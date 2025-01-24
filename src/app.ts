@@ -2,7 +2,8 @@ import express, { Application, NextFunction, Request, Response } from "express";
 import cors from "cors";
 
 // routes
-import { authRouter } from "./src/routes/authRouter";
+import { authRouter } from "./routes/auth.router";
+import { PORT } from "./config";
 
 export class App {
   private app: Application;
@@ -45,8 +46,8 @@ export class App {
 
   // start func
   start() {
-    this.app.listen(8080, () => {
-      console.log(`Server running on PORT 8080`);
+    this.app.listen(PORT, () => {
+      console.log(`Server running on PORT ${PORT}`);
     });
   }
 }
