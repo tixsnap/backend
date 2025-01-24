@@ -19,9 +19,11 @@ enum Role {
 }
 
 model User {
-  id       String @id @default(uuid())
-  email    String @unique
-  password String
+  id         String  @id @default(uuid())
+  email      String  @unique
+  password   String
+  name       String
+  isVerified Boolean @default(false)
 
   totalRating Float?
 
@@ -30,7 +32,7 @@ model User {
   referralCode String @unique
 
   profile         Profile?
-  resetToken      PasswordResetToken[]
+  // resetToken      PasswordResetToken[]
   events          Event[]
   transactions    Transaction[]
   reviews         Review[]
@@ -54,8 +56,9 @@ model CouponReferral {
   user   User   @relation(fields: [id], references: [id])
   userId String
 
-  couponName String @unique
+  couponName String  @default("BONUS REFERRAL")
   totalValue Float // 10k 
+  isUsed     Boolean @default(false)
 
   createdAt  DateTime @default(now())
   validUntil DateTime // 3 months after submitting referral
@@ -75,6 +78,7 @@ model Event {
   location      String?
   category      String?
   totalAttendee Int?
+  slug          String?  @unique
 
   ticketSold Int?
   ticketType TicketType
@@ -86,6 +90,8 @@ model Event {
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
+
+  transaction Transaction?
 
   voucher   Voucher? @relation(fields: [voucherId], references: [id])
   voucherId String
@@ -141,16 +147,16 @@ model Voucher {
   @@map("Vouchers")
 }
 
-model PasswordResetToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  expiresAt DateTime
+// model PasswordResetToken {
+//   id        String   @id @default(uuid())
+//   token     String   @unique
+//   expiresAt DateTime
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String
+//   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+//   userId String
 
-  @@map("password_reset_tokens")
-}
+//   @@map("password_reset_tokens")
+// }
 
 model Profile {
   id   String @id
@@ -183,6 +189,9 @@ model Transaction {
   user   User   @relation(fields: [userId], references: [id])
   userId String
 
+  event   Event  @relation(fields: [eventId], references: [id])
+  eventId String @unique
+
   status StatusTransaction
 
   validUntilPaymentProof DateTime //2h after checkout
@@ -210,6 +219,7 @@ model Point {
 
   totalPoint Int //10k every refferal member
   validUntil DateTime // 3 month after newest invited people
+  invitedId  String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
