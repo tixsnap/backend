@@ -28,9 +28,9 @@ export class AuthController {
     return expirationDate;
   }
 
-  async registerCustomer(req: Request, res: Response, next: NextFunction) {
+  async registerUser(req: Request, res: Response, next: NextFunction) {
     try {
-      const { referral, email, name, password } = req.body;
+      const { referral, email, name, password, role } = req.body;
       const registeredUser = await findByEmail(email); // check user exist
       if (registeredUser) throw new Error("Email has been registered !");
       const referralCode: string = generateRefferaCodeUser(); // generate code referral
@@ -52,7 +52,7 @@ export class AuthController {
                 email,
                 name,
                 password: hashedPassword,
-                role: "CUSTOMER",
+                role,
                 referralCode,
               },
             }
@@ -118,7 +118,7 @@ export class AuthController {
             name,
             email,
             password: hashedPassword,
-            role: "CUSTOMER",
+            role,
             referralCode,
           },
         });
@@ -159,7 +159,7 @@ export class AuthController {
     }
   }
 
-  async loginCustomer(req: Request, res: Response, next: NextFunction) {
+  async loginUser(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password } = req.body;
 
