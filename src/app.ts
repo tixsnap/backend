@@ -4,6 +4,7 @@ import cors from "cors";
 // routes
 import { authRouter } from "./routes/auth.router";
 import { PORT } from "./config";
+import { eventRouter } from "./routes/event.router";
 
 export class App {
   private app: Application;
@@ -25,6 +26,7 @@ export class App {
   // routes configuration
   private routes() {
     this.app.use("/auth", authRouter());
+    this.app.use("/organizer/events", eventRouter())
   }
 
   // handler configuration

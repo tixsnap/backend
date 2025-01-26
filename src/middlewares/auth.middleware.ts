@@ -1,17 +1,40 @@
-import { NextFunction, Request } from "express";
-import jwt, { verify } from "jsonwebtoken";
+import { NextFunction, Request, Response } from "express";
+import { verify } from "jsonwebtoken";
 import { UserLogin } from "../interfaces/auth.interface";
+import { jwt_secret } from "../config";
 
-const jwt_secret = process.env.JWT_SECRET || "";
+export const verifyToken = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { authorization } = req.headers;
+    const token = authorization?.split("Bearer ")[1];
 
-const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+    const decodedToken = verify(token as string, jwt_secret) as {
+      id: string;
+      email: string;
+      role: string;
+    };
+    if (!decodedToken) throw new Error("Unauthorized");
+    req.user = decodedToken as UserLogin;
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyRole = (req: Request, res: Response, next: NextFunction) => {
   try {
     const { authorization } = req.headers;
     const token = String(authorization || "").split("Bearer ")[1];
-    const verifiedUser = verify(token, jwt_secret);
 
-    if (!verifiedUser) throw new Error("Unauthorized");
-    req.user = verifiedUser as UserLogin;
+    const decoded = verify(token, jwt_secret) as { role: string };
+    console.log(decoded.role);
+    if (decoded.role != "ORGANIZER")
+      throw new Error("The resources are not allowed !!");
 
     next();
   } catch (error) {

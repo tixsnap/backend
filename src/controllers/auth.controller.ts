@@ -140,7 +140,7 @@ export class AuthController {
         email: successfullRegistedUser.email,
       });
 
-      // console.log(token)
+      console.log(token)
 
       await sendEmail(
         username_nodemailer,
