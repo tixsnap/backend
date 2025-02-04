@@ -2,6 +2,7 @@ import * as nodemailer from "nodemailer";
 import * as handlebars from "handlebars";
 import fs from "fs";
 import path from "path";
+import { frontend_host } from "../config";
 
 type EmailActivity = "resetPassword" | "verifyUser";
 
@@ -21,7 +22,7 @@ export async function sendEmail(
     const html = compiledTemplate({
       username: to,
       token,
-      resetLink: `http://localhost:8080/auth/reset-password/${token}`,
+      resetLink: `${frontend_host}/auth/reset-password?token=${token}`,
       expiry: 1,
       appName: "TixSnap",
       supportEmail: "support@tixsnap.com",
@@ -60,7 +61,7 @@ export async function sendEmail(
     const html = compiledTemplate({
       username: to,
       token,
-      verifyLink: `http://localhost:8080/auth/verify/${token}`,
+      verifyLink: `${frontend_host}/auth/verify?token=${token}`,
       expiry: 1,
       appName: "TixSnap",
       supportEmail: "support@tixsnap.com",

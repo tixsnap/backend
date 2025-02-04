@@ -12,25 +12,16 @@ import {
   username_nodemailer,
 } from "../config";
 import * as bcrypt from "bcrypt";
+import { couponExpired } from "../utils/coupon.helper";
 
 export class AuthController {
   private static readonly SALT_ROUND = 9;
   private static readonly REFERRAL_POINTS = 5000;
   private static readonly REFERRER_POINTS = 10000;
-  private static readonly COUPON_EXPIRATION = 3;
 
-  // INTERNAL HELPERS
-  private couponExpired() {
-    const expirationDate = new Date();
-    expirationDate.setMonth(
-      expirationDate.getMonth() + AuthController.COUPON_EXPIRATION
-    );
-    return expirationDate;
-  }
-
-  async registerCustomer(req: Request, res: Response, next: NextFunction) {
+  async registerUser(req: Request, res: Response, next: NextFunction) {
     try {
-      const { referral, email, name, password } = req.body;
+      const { referral, email, name, password, role } = req.body;
       const registeredUser = await findByEmail(email); // check user exist
       if (registeredUser) throw new Error("Email has been registered !");
       const referralCode: string = generateRefferaCodeUser(); // generate code referral
@@ -52,7 +43,7 @@ export class AuthController {
                 email,
                 name,
                 password: hashedPassword,
-                role: "CUSTOMER",
+                role,
                 referralCode,
               },
             }
@@ -62,7 +53,7 @@ export class AuthController {
             data: {
               userId: newUserRegister.id as string,
               totalValue: AuthController.REFERRAL_POINTS,
-              validUntil: this.couponExpired(),
+              validUntil: couponExpired(),
               user: {
                 connect: {
                   id: newUserRegister.id as string,
@@ -100,7 +91,7 @@ export class AuthController {
             await trx.point.create({
               data: {
                 totalPoint: AuthController.REFERRER_POINTS,
-                validUntil: this.couponExpired(),
+                validUntil: couponExpired(),
                 invitedId: newUserRegister.id as string,
                 user: {
                   connect: {
@@ -118,7 +109,7 @@ export class AuthController {
             name,
             email,
             password: hashedPassword,
-            role: "CUSTOMER",
+            role,
             referralCode,
           },
         });
@@ -140,7 +131,7 @@ export class AuthController {
         email: successfullRegistedUser.email,
       });
 
-      // console.log(token)
+      console.log(token)
 
       await sendEmail(
         username_nodemailer,
@@ -159,7 +150,7 @@ export class AuthController {
     }
   }
 
-  async loginCustomer(req: Request, res: Response, next: NextFunction) {
+  async loginUser(req: Request, res: Response, next: NextFunction) {
     try {
       const { email, password } = req.body;
 
@@ -179,6 +170,8 @@ export class AuthController {
         id: existUser.id,
         role: existUser.role,
         email: existUser.email,
+        name: existUser.name,
+        referral: existUser.referralCode
       });
 
       res.status(200).send({
