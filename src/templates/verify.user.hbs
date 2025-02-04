@@ -19,7 +19,9 @@
         <p>Please verify your account here through this link</p>
         
         <p>{{verifyLink}}</p>
-        <button href="{{verifyLink}}" class="button">Verify</button>
+        <a href="{{verifyLink}}" target="_blank">
+            <button>Verify</button>
+        </a>
         
         <p>Token akan kadaluarsa dalam {{expiry}} jam.</p>
         {{/if}}

@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { prisma } from "../config";
 import {
-    findById,
+  findById,
   findEventByName,
   formatIdr,
 } from "../utils/event.helper";
@@ -13,8 +13,8 @@ export class EventController {
   async getEvents(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user?.id;
-      const {page, name} = req.query
-      console.log(name)
+      const {page, name, year, month, day} = req.query
+      console.log(name, year, month, day)
 
       const limit = 10
       const pageStr = page || 1
@@ -69,6 +69,26 @@ export class EventController {
             message: "success",
             data
         })
+      }else if(year){
+
+        const data = await prisma.event.findMany({
+          where: {
+            userId,
+            isDeleted: false,
+            createdAt: {
+              gte: new Date(`${year}-${month}-${day}`).toISOString(),
+              lte: new Date(`${Number(year) + 1}-${month}-${day}`).toISOString()
+            }
+          }
+        })
+
+        res.status(200).send({
+          message: "success",
+          data
+        })
+
+
+
       }else{
         // if no page params
         const data = await prisma.event.findMany({
