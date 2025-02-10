@@ -11,8 +11,8 @@ export async function sendEmail(
   pass: string,
   to: string,
   token?: string,
+  activity?: EmailActivity,
   txId?: string,
-  activity?: EmailActivity
 ) {
   if (activity == "resetPassword") {
     const template = fs.readFileSync(
