@@ -4,13 +4,14 @@ import fs from "fs";
 import path from "path";
 import { frontend_host } from "../config";
 
-type EmailActivity = "resetPassword" | "verifyUser";
+type EmailActivity = "resetPassword" | "verifyUser" | "accepted" | "rejected";
 
 export async function sendEmail(
   user: string,
   pass: string,
   to: string,
   token?: string,
+  txId?: string,
   activity?: EmailActivity
 ) {
   if (activity == "resetPassword") {
@@ -71,6 +72,80 @@ export async function sendEmail(
       from: "tixsnap@gmail.com",
       to,
       subject: "Verify Email",
+      html,
+    };
+
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      auth: {
+        user,
+        pass,
+      },
+    });
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log(error);
+        throw new Error("Error sending mail");
+      } else {
+        console.log(`Email sent: ${info.response}`);
+        throw new Error("Check your email for Verify your account");
+      }
+    });
+  }else if(activity == "accepted"){
+    const template = fs.readFileSync(
+      path.join(process.cwd(), "src/templates/accepted.tx.hbs"),
+      "utf8"
+    );
+    const compiledTemplate = handlebars.compile(template);
+    const html = compiledTemplate({
+      username: to,
+      txId,
+      appName: "TixSnap",
+      supportEmail: "support@tixsnap.com",
+    });
+
+    const mailOptions = {
+      from: "tixsnap@gmail.com",
+      to,
+      subject: "Transaction Notification",
+      html,
+    };
+
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      auth: {
+        user,
+        pass,
+      },
+    });
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log(error);
+        throw new Error("Error sending mail");
+      } else {
+        console.log(`Email sent: ${info.response}`);
+        throw new Error("Check your email for Verify your account");
+      }
+    });
+  }else if(activity == "rejected"){
+    const template = fs.readFileSync(
+      path.join(process.cwd(), "src/templates/rejected.tx.hbs"),
+      "utf8"
+    );
+    const compiledTemplate = handlebars.compile(template);
+    const html = compiledTemplate({
+      username: to,
+      txId,
+      appName: "TixSnap",
+      supportEmail: "support@tixsnap.com",
+    });
+
+    const mailOptions = {
+      from: "tixsnap@gmail.com",
+      to,
+      subject: "Transaction Notification",
       html,
     };
 

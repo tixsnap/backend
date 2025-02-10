@@ -78,6 +78,7 @@ model Event {
   location      String?
   category      String?
   totalAttendee Int?
+  imageUrl      String?
   slug          String?  @unique
 
   ticketSold Int?
@@ -92,7 +93,7 @@ model Event {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
-  transaction Transaction?
+  transaction Transaction[]
 
   voucher   Voucher? @relation(fields: [voucherId], references: [id])
   voucherId String?
@@ -185,13 +186,14 @@ enum StatusTransaction {
 model Transaction {
   id           String        @id @default(uuid())
   totalPayment Float
+  totalTicket  Int
   paymentProof PaymentProof?
 
   user   User   @relation(fields: [userId], references: [id])
   userId String
 
   event   Event  @relation(fields: [eventId], references: [id])
-  eventId String @unique
+  eventId String 
 
   status StatusTransaction
 

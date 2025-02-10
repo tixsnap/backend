@@ -14,4 +14,5 @@ export interface EventUpdate {
   availableSeat?: number;
   ticketSold?: number;
   isAttended?: boolean;
+  imageUrl?: string
 }

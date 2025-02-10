@@ -18,7 +18,17 @@ export const findEventByName = async (name: string) =>
       },
   })  
   }
+  
 
+  export const findBySlug = async (slug: string, userId: string) => {
+    return await prisma.event.findUnique({
+      where: {
+          slug,
+          userId,
+          isDeleted: false
+      },
+  })  
+  }
   
 
 export const formatIdr = (price: number) => {
