@@ -77,7 +77,7 @@ export class TransactionController {
             email: true
           }
         })
-        sendEmail(username_nodemailer, password_nodemailer, userOwnTx?.email as string, undefined, updatedTransaction.id, "accepted" )
+        sendEmail(username_nodemailer, password_nodemailer, userOwnTx?.email as string, undefined, "accepted", updatedTransaction.id )
       }else if(updatedTransaction.status == "REJECTED"){
         const userOwnTx = await prisma.user.findUnique ({
           where: {
@@ -87,7 +87,7 @@ export class TransactionController {
             email: true
           }
         })
-        sendEmail(username_nodemailer, password_nodemailer, userOwnTx?.email as string, undefined, updatedTransaction.id, "rejected" )
+        sendEmail(username_nodemailer, password_nodemailer, userOwnTx?.email as string, undefined, "rejected", updatedTransaction.id )
       }
 
       res.status(200).send({
