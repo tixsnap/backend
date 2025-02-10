@@ -5,7 +5,8 @@ import cors from "cors";
 import { authRouter } from "./routes/auth.router";
 import { PORT } from "./config";
 import { eventRouter } from "./routes/event.router";
-import { userController } from "./routes/user.router";
+import { userRouter } from "./routes/user.router";
+import { transRouter } from "./routes/transaction.router";
 
 export class App {
   private app: Application;
@@ -17,18 +18,28 @@ export class App {
     this.handleError();
   }
 
+  // Public getter to access the app instance
+  public get instance(): Application {
+    return this.app;
+  }
+
   // configuration express
   private configure() {
     this.app.use(express.json());
     // this.app.use(express.urlencoded({extended: true}));
-    this.app.use(cors());
+    this.app.use(cors({
+      origin: "*", 
+      methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+      allowedHeaders: "Content-Type,Authorization"
+    }));
   }
 
   // routes configuration
   private routes() {
     this.app.use("/auth", authRouter());
     this.app.use("/organizer/events", eventRouter())
-    this.app.use("/profile", userController());
+    this.app.use("/profile", userRouter());
+    this.app.use("/tx", transRouter());
   }
 
   // handler configuration

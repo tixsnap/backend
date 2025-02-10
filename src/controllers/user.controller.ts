@@ -128,4 +128,41 @@ export class UserController {
         }
     }
 
+    async getProfileId(req: Request, res: Response, next: NextFunction){
+        try {
+            
+            const id = req.user?.id
+            const existProfile = await prisma.profile.findUnique({
+                where: {
+                    id
+                },
+                select: {
+                    firstName: true,
+                    lastName: true,
+                    profilePicture: true,
+                    user: {
+                        select: {
+                            email: true,
+                            point: {
+                                select: {
+                                    totalPoint: true
+                                }
+
+                            }
+                        }
+                    }
+                }
+            })
+
+            if(!existProfile) throw new Error("Profile not found")
+            res.status(200).send({
+                message: "success",
+                data: existProfile
+            })
+
+        } catch (error) {
+            next(error)
+        }
+    }
+
 }
