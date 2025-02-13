@@ -5,6 +5,7 @@ import cors from "cors";
 import { authRouter } from "./routes/auth.router";
 import { PORT } from "./config";
 import { eventRouter } from "./routes/event.router";
+import { userEventRouter } from "./routes/userEvent.router";
 import { userRouter } from "./routes/user.router";
 import { transRouter } from "./routes/transaction.router";
 
@@ -27,17 +28,20 @@ export class App {
   private configure() {
     this.app.use(express.json());
     // this.app.use(express.urlencoded({extended: true}));
-    this.app.use(cors({
-      origin: "*", 
-      methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-      allowedHeaders: "Content-Type,Authorization"
-    }));
+    this.app.use(
+      cors({
+        origin: "*",
+        methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+        allowedHeaders: "Content-Type,Authorization",
+      })
+    );
   }
 
   // routes configuration
   private routes() {
     this.app.use("/auth", authRouter());
-    this.app.use("/organizer/events", eventRouter())
+    this.app.use("/events", userEventRouter());
+    this.app.use("/organizer/events", eventRouter());
     this.app.use("/profile", userRouter());
     this.app.use("/tx", transRouter());
   }
