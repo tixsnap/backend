@@ -59,10 +59,12 @@ model CouponReferral {
   couponName String  @default("BONUS REFERRAL")
   totalValue Float // 10k 
   isUsed     Boolean @default(false)
+  isExpired  Boolean @default(false)
 
   createdAt  DateTime @default(now())
   validUntil DateTime // 3 months after submitting referral
 
+  transactions Transaction[]
   @@map("coupon_referrals")
 }
 
@@ -95,8 +97,7 @@ model Event {
 
   transaction Transaction[]
 
-  voucher   Voucher? @relation(fields: [voucherId], references: [id])
-  voucherId String?
+  voucers EventVoucher[]
 
   reviews Review[]
   ratings Rating[]
@@ -104,6 +105,18 @@ model Event {
   @@map("events")
 }
 
+model EventVoucher {
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String
+
+  voucher   Voucher   @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  voucherId String
+
+  createdAt DateTime @default(now())
+
+  @@id([eventId, voucherId]) // Composite primary key
+  @@map("event_vouchers")
+}
 model Review {
   id String @id @default(uuid())
 
@@ -137,14 +150,16 @@ model Rating {
 model Voucher {
   id           String   @id @default(uuid())
   name         String
-  totalVoucher Float
+  totalValue   Int
+  totalVoucher Float?
   startFrom    DateTime
   validUntil   DateTime
 
-  events Event[]
+  events EventVoucher[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  Transaction Transaction[]
 
   @@map("Vouchers")
 }
@@ -194,6 +209,7 @@ model Transaction {
 
   event   Event  @relation(fields: [eventId], references: [id])
   eventId String 
+  isDeleted Boolean @default(false)
 
   status StatusTransaction
 
@@ -202,6 +218,18 @@ model Transaction {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // add column for point, vouched, coupon
+  couponReferral   CouponReferral? @relation(fields: [couponReferralId], references: [id])
+  couponReferralId String?
+
+  voucher   Voucher? @relation(fields: [voucherId], references: [id])
+  voucherId String?
+
+  point   Point?  @relation(fields: [pointId], references: [id])
+  pointId String?
+
+  pointApplied Int @default(0)
 
   @@map("transactions")
 }
@@ -223,9 +251,11 @@ model Point {
   totalPoint Int //10k every refferal member
   validUntil DateTime // 3 month after newest invited people
   invitedId  String
+  isExpired  Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  Transaction Transaction[]
 
   @@map("points")
 }
