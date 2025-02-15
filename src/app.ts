@@ -7,6 +7,8 @@ import { PORT } from "./config";
 import { eventRouter } from "./routes/event.router";
 import { userRouter } from "./routes/user.router";
 import { transRouter } from "./routes/transaction.router";
+import { checkPointAndCouponReffExpired, checkTransactionExpired } from "./scheduler/cron";
+import { voucherRouter } from "./routes/voucher.router";
 
 export class App {
   private app: Application;
@@ -16,6 +18,8 @@ export class App {
     this.configure();
     this.routes();
     this.handleError();
+    checkTransactionExpired()
+    checkPointAndCouponReffExpired()
   }
 
   // Public getter to access the app instance
@@ -40,6 +44,7 @@ export class App {
     this.app.use("/organizer/events", eventRouter())
     this.app.use("/profile", userRouter());
     this.app.use("/tx", transRouter());
+    this.app.use("/organizer/vouchers", voucherRouter());
   }
 
   // handler configuration

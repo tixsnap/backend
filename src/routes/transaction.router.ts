@@ -6,8 +6,9 @@ export const transRouter = () => {
   const router = Router();
   const transRouter = new TransactionController();
 
-  router.post("/", verifyToken, verifyRole, transRouter.createTransaction);
+  router.post("/", verifyToken, transRouter.createTransaction);
   router.get("/", verifyToken, verifyRole, transRouter.getTransaction)
+  router.get("/history", verifyToken, verifyRole, transRouter.getTransactionHistory)
   router.patch("/:id", verifyToken, verifyRole, transRouter.setTransactionStatus)
 
   return router;
