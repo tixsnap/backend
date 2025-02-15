@@ -103,6 +103,11 @@ export class EventController {
                 role: true,
                 },
             },
+            voucers: {
+              include: {
+                voucher: true
+              }
+            }
             },
             where: {
             userId,

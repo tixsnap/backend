@@ -1,45 +1,95 @@
 import { NextFunction, Request, Response } from "express";
 import { password_nodemailer, prisma, username_nodemailer } from "../config";
 import { sendEmail } from "../utils/nodemailer.helper";
+import { StatusTransaction } from "@prisma/client";
 
 export class TransactionController {
+  
   async getTransaction(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user?.id;
-      const data = await prisma.transaction.findMany({
-        where: {
-          event: {
-            userId: userId,
-          },
-        },
-        include: {
-          event: {
-            select: {
-              name: true,
-              price: true,
-              availableSeat: true,
-            },
-          },
-          user: {
-            select: {
-              name: true,
-              email: true,
-              id: true
-            }
-          },
-          paymentProof: {
-            select: {
-              paymentPicture: true,
-            },
-          },
-        },
-      });
+      const { name } = req.query
 
-      res.status(200).send({
-        message: "success",
-        length: data.length,
-        data,
-      });
+      if(name) {
+        const filteredData = await prisma.transaction.findMany({
+          where: {
+            event: {
+              userId,
+              name: {
+                contains: name as string,
+                mode: "insensitive"
+              },
+            },
+            isDeleted: false  
+            
+          },
+          include: {
+            event: {
+              select: {
+                name: true,
+                price: true,
+                availableSeat: true,
+              },
+            },
+            user: {
+              select: {
+                name: true,
+                email: true,
+                id: true
+              }
+            },
+            paymentProof: {
+              select: {
+                paymentPicture: true,
+              },
+            },
+          },
+        })
+
+        res.status(200).send({
+          message: "success",
+          length: filteredData.length,
+          filteredData,
+        });
+      }else{
+        const data = await prisma.transaction.findMany({
+          where: {
+            event: {
+              userId: userId,
+            },
+            isDeleted: false
+          },
+          include: {
+            event: {
+              select: {
+                name: true,
+                price: true,
+                availableSeat: true,
+              },
+            },
+            user: {
+              select: {
+                name: true,
+                email: true,
+                id: true
+              }
+            },
+            paymentProof: {
+              select: {
+                paymentPicture: true,
+              },
+            },
+          },
+        });
+  
+        res.status(200).send({
+          message: "success",
+          length: data.length,
+          data,
+        });
+      }
+
+      
     } catch (error) {
       next(error);
     }
@@ -65,6 +115,7 @@ export class TransactionController {
         },
         data: {
           status: status,
+          isDeleted: true
         },
       });
 
@@ -79,15 +130,66 @@ export class TransactionController {
         })
         sendEmail(username_nodemailer, password_nodemailer, userOwnTx?.email as string, undefined, "accepted", updatedTransaction.id )
       }else if(updatedTransaction.status == "REJECTED"){
-        const userOwnTx = await prisma.user.findUnique ({
-          where: {
-            id: updatedTransaction.userId
-          },
-          select: {
-            email: true
+        await prisma.$transaction(async (trx) => {
+          const userOwnTx = await trx.user.findUnique ({
+            where: {
+              id: updatedTransaction.userId
+            },
+            select: {
+              email: true
+            }
+          })
+
+          // return available seat
+          await prisma.event.update({
+            where: {
+              id: updatedTransaction.eventId
+            },
+            data: {
+              availableSeat: {
+                increment: updatedTransaction.totalTicket
+              }
+            }
+          })
+          
+          // return coupon referral
+          if(updatedTransaction.couponReferralId){
+            await prisma.couponReferral.update({
+              where: {
+                id: updatedTransaction.couponReferralId
+              },
+              data: {isUsed: false}
+            })
           }
-        })
-        sendEmail(username_nodemailer, password_nodemailer, userOwnTx?.email as string, undefined, "rejected", updatedTransaction.id )
+  
+          // return point
+          if(updatedTransaction.pointId){
+            const usedPoint = await prisma.point.findUnique({
+              where: {
+                id: updatedTransaction.pointId
+              },
+              select: {
+                totalPoint: true
+              }
+            })
+  
+            if(usedPoint){
+              await prisma.point.update({
+                where: {
+                  id: updatedTransaction.pointId
+                },
+                data: {
+                  totalPoint: {
+                    increment: updatedTransaction.pointApplied
+                  }
+                }
+              })
+            }
+          }
+
+          // send email
+          sendEmail(username_nodemailer, password_nodemailer, userOwnTx?.email as string, undefined, "rejected", updatedTransaction.id )
+        })        
       }
 
       res.status(200).send({
@@ -103,65 +205,189 @@ export class TransactionController {
 
   async createTransaction(req: Request, res: Response, next: NextFunction) {
     try {
+      const { eventId, totalPayment, totalTicket, couponReferralId, pointId, voucherId } = req.body;
+      const userId = req.user?.id;
+  
+      // Retrieve user's total points
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { 
+          point: {
+            select: {
+              totalPoint: true
+            }
+          },
+          couponsReferral: {
+            select: {
+              id: true,
+              totalValue: true,
+              isUsed: true
+            }
+          },
+         },
+      });
 
-      const { eventId, totalPayment, totalTicket } = req.body; 
-      const userId = req.user?.id;  
-
-      const userPoint = await prisma.point.findUnique({
+      const event = await prisma.event.findUnique({
         where: {
-          id: userId
+          id: eventId
         },
         select: {
-          totalPoint: true
+          price: true,
+          availableSeat: true,
         }
       })
 
-      if(userPoint){
-        const newTransaction = await prisma.transaction.create({
-          data: {
-            totalPayment: (Number(totalPayment) - Number(userPoint)),
-            totalTicket,
-            status: "WAITING_PAYMENT",  // Status can be adjusted as needed
-            userId: userId as string,
-            eventId: eventId,
-            validUntilPaymentProof: new Date(new Date().getTime() + 2 * 60 * 60 * 1000), // 2 hours after checkout
-            validUntilConfirmation: new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000), // 3 days after payment proof
-          },
+      let totalPaymentData = Number(event?.price) * Number(totalTicket);
+      let pointApplied = 0; // Track points applied using correct field name
+  
+      // Apply coupon referral if it exists
+      if (couponReferralId && user?.couponsReferral && !user.couponsReferral.isUsed) {
+        const couponValue = user.couponsReferral.totalValue;
+        totalPaymentData -= couponValue;
+        
+        // Set coupon referral as used
+        await prisma.couponReferral.update({
+          where: { id: couponReferralId },
+          data: { isUsed: true },
         });
-
-      }else{
-
       }
-      const newTransaction = await prisma.transaction.create({
-        data: {
-          totalPayment,
-          totalTicket,
-          status: "WAITING_PAYMENT",  // Status can be adjusted as needed
-          userId: userId as string,
-          eventId: eventId,
-          validUntilPaymentProof: new Date(new Date().getTime() + 2 * 60 * 60 * 1000), // 2 hours after checkout
-          validUntilConfirmation: new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000), // 3 days after payment proof
-        },
+  
+      // Apply points if they exist
+      if (pointId && user?.point?.totalPoint as number > 0) {
+        const pointsValue = user?.point?.totalPoint;
+        
+        // Calculate points to be applied
+        pointApplied = Math.min(pointsValue as number, totalPaymentData);
+        totalPaymentData -= pointApplied;
+        
+        // Update the user's points
+        await prisma.point.update({
+          where: { id: pointId },
+          data: { totalPoint: (user?.point?.totalPoint ?? 0) - pointApplied },
+        });
+      }
+  
+      // Create the transaction data
+      const transactionData = {
+        totalTicket, 
+        status: StatusTransaction.WAITING_PAYMENT,
+        userId: userId as string,
+        eventId,
+        couponReferralId: couponReferralId || null,
+        voucherId: voucherId || null,
+        pointId: pointId || null,
+        validUntilPaymentProof: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        validUntilConfirmation: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        totalPayment: totalPaymentData,
+        pointApplied: pointApplied // Using correct field name
+      }
+  
+      // Create the transaction
+      const newTransaction = await prisma.transaction.create({ data: transactionData });
+  
+      // Create associated payment proof record
+      const newPayment = await prisma.paymentProof.create({
+        data: { paymentPicture: null, id: newTransaction.id },
       });
       
-
-      // Now create the paymentProof, using the transaction's ID
-      const newPayment = await prisma.paymentProof.create({
-        data: {
-          paymentPicture: null, // You can use a default or null here if not provided
-          id: newTransaction.id, // Link payment proof to the transaction using the same ID
-        },
-      });
-
-      // Respond with the newly created transaction
       res.status(201).json({
         message: "Transaction created successfully",
         transaction: newTransaction,
-        paymentProof: newPayment
+        paymentProof: newPayment,
+        // pointApplied: pointApplied // Include points applied in the response
       });
+  
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getTransactionHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.id;
+      const { name } = req.query
+
+      if(name) {
+        const filteredData = await prisma.transaction.findMany({
+          where: {
+            event: {
+              userId,
+              name: {
+                contains: name as string,
+                mode: "insensitive"
+              },
+            },
+            isDeleted: true
+          },
+          include: {
+            event: {
+              select: {
+                name: true,
+                price: true,
+                availableSeat: true,
+              },
+            },
+            user: {
+              select: {
+                name: true,
+                email: true,
+                id: true
+              }
+            },
+            paymentProof: {
+              select: {
+                paymentPicture: true,
+              },
+            },
+          },
+        })
+
+        res.status(200).send({
+          message: "success",
+          length: filteredData.length,
+          filteredData,
+        });
+      }else{
+        const data = await prisma.transaction.findMany({
+          where: {
+            event: {
+              userId: userId,
+            },
+            isDeleted: true
+          },
+          include: {
+            event: {
+              select: {
+                name: true,
+                price: true,
+                availableSeat: true,
+              },
+            },
+            user: {
+              select: {
+                name: true,
+                email: true,
+                id: true
+              }
+            },
+            paymentProof: {
+              select: {
+                paymentPicture: true,
+              },
+            },
+          },
+        });
+  
+        res.status(200).send({
+          message: "success",
+          length: data.length,
+          data,
+        });
+      }
+
       
     } catch (error) {
-      next(error)
+      next(error);
     }
   }
 }
