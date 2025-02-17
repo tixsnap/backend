@@ -75,6 +75,7 @@ export class VoucherControoler {
                     startFrom: true,
                     validUntil: true,
                     totalValue: true,
+                    isExpired: true,
                     events: {
                         select: {
                             event: {
