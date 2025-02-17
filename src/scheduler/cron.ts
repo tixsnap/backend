@@ -84,3 +84,40 @@ export const checkPointAndCouponReffExpired = () => {
     }
   })
 }
+
+export const checkVoucherExpired = () => {
+  try {
+
+    cron.schedule("0 * * * *", async () => {
+      console.log("Checking for expired points...");
+      try {
+
+        const vouchers = await prisma.voucher.findMany({
+          where: {
+            isExpired: false
+          }
+        })
+        const expiredVouchers = vouchers.filter(voucher => new Date(voucher.validUntil) < new Date());
+
+        if(expiredVouchers.length > 0){
+          await prisma.voucher.updateMany({
+            where: {
+              id: { in: expiredVouchers.map(voucher => voucher.id)}
+            },
+            data: {isExpired: true}
+          })
+
+          console.log(`Updated ${expiredVouchers.length} expired vouchers.`);
+        }
+
+        
+      } catch (error) {
+        console.error("Error updating expired vouchers:", error)
+      }
+    })
+    
+    
+  } catch (error) {
+    console.log(error)
+  }
+}

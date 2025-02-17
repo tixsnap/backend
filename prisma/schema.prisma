@@ -154,6 +154,7 @@ model Voucher {
   totalVoucher Float?
   startFrom    DateTime
   validUntil   DateTime
+  isExpired    Boolean @default(false)
 
   events EventVoucher[]
 
