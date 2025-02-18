@@ -15,113 +15,54 @@ export class EventController {
   async getEvents(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user?.id;
-      const {page, name, year, month, day} = req.query
-      console.log(name, year, month, day)
-
-      const limit = 10
-      const pageStr = page || 1
-      const skip = (Number(pageStr) - 1) * limit
-
-      if(page){
-        const data = await prisma.event.findMany({
-            include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true,
-                  },
-                },
-              },
-              where: {
-                userId,
-                isDeleted: false
-              },
-              take: limit,
-              skip
-        })
-        res.status(200).send({
-            message: "success",
-            page,
-            data
-        })
-      }else if(name){
-        const data= await prisma.event.findMany({
-            include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    role: true,
-                  },
-                },
-              },
-              where: {
-                userId,
-                isDeleted: false,
-                name: {
-                    contains: String(name),
-                    mode: 'insensitive'
-                }
-              },
-        })
-        res.status(200).send({
-            message: "success",
-            data
-        })
-      }else if(year){
-
-        const data = await prisma.event.findMany({
-          where: {
-            userId,
-            isDeleted: false,
-            createdAt: {
-              gte: new Date(`${year}-${month}-${day}`).toISOString(),
-              lte: new Date(`${Number(year) + 1}-${month}-${day}`).toISOString()
-            }
-          }
-        })
-
-        res.status(200).send({
-          message: "success",
-          data
-        })
-
-
-
-      }else{
-        // if no page params
-        const data = await prisma.event.findMany({
-            include: {
-            user: {
-                select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                },
-            },
-            voucers: {
-              include: {
-                voucher: true
-              }
-            }
-            },
-            where: {
-            userId,
-            isDeleted: false
-            },
-            take: limit,
-            skip,
-        });
-        res.status(200).send({
-          message: "success",
-          data
-        });
+      const { page, name, year, month, day } = req.query;
+      
+      const limit = 10;
+      const pageStr = page || 1;
+      const skip = (Number(pageStr) - 1) * limit;
+  
+      let dateFilter: any = {};
+  
+      if (year && month && day) {
+        const startDate = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+        const endDate = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
+        dateFilter.createdAt = { gte: startDate, lte: endDate };
+      } else if (year && month) {
+        const startDate = new Date(`${year}-${month}-01T00:00:00.000Z`);
+        const endDate = new Date(`${year}-${month}-31T23:59:59.999Z`);
+        dateFilter.createdAt = { gte: startDate, lte: endDate };
+      } else if (year) {
+        const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
+        const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
+        dateFilter.createdAt = { gte: startDate, lte: endDate };
       }
-
+  
+      let filter: any = {
+        userId,
+        isDeleted: false,
+        // ...dateFilter,
+      };
+  
+      if (name) {
+        filter.name = { contains: String(name), mode: 'insensitive' };
+      }
+  
+      const data = await prisma.event.findMany({
+        include: {
+          user: {
+            select: { id: true, name: true, email: true, role: true },
+          },
+          voucers: { include: { voucher: true } },
+        },
+        where: filter,
+        take: limit,
+        skip,
+      });
+  
+      res.status(200).send({
+        message: "success",
+        data,
+      });
     } catch (error) {
       next(error);
     }
