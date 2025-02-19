@@ -4,24 +4,22 @@ import { sendEmail } from "../utils/nodemailer.helper";
 import { StatusTransaction } from "@prisma/client";
 
 export class TransactionController {
-  
   async getTransaction(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user?.id;
-      const { name } = req.query
+      const { name } = req.query;
 
-      if(name) {
+      if (name) {
         const filteredData = await prisma.transaction.findMany({
           where: {
             event: {
               userId,
               name: {
                 contains: name as string,
-                mode: "insensitive"
+                mode: "insensitive",
               },
             },
-            isDeleted: false  
-            
+            isDeleted: false,
           },
           include: {
             event: {
@@ -35,8 +33,8 @@ export class TransactionController {
               select: {
                 name: true,
                 email: true,
-                id: true
-              }
+                id: true,
+              },
             },
             paymentProof: {
               select: {
@@ -44,20 +42,20 @@ export class TransactionController {
               },
             },
           },
-        })
+        });
 
         res.status(200).send({
           message: "success",
           length: filteredData.length,
           filteredData,
         });
-      }else{
+      } else {
         const data = await prisma.transaction.findMany({
           where: {
             event: {
               userId: userId,
             },
-            isDeleted: false
+            isDeleted: false,
           },
           include: {
             event: {
@@ -71,8 +69,8 @@ export class TransactionController {
               select: {
                 name: true,
                 email: true,
-                id: true
-              }
+                id: true,
+              },
             },
             paymentProof: {
               select: {
@@ -81,15 +79,13 @@ export class TransactionController {
             },
           },
         });
-  
+
         res.status(200).send({
           message: "success",
           length: data.length,
           data,
         });
       }
-
-      
     } catch (error) {
       next(error);
     }
@@ -98,7 +94,7 @@ export class TransactionController {
   async setTransactionStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const { status, id } = req.body;
-      const organizerId = req.user?.id
+      const organizerId = req.user?.id;
       const transExist = await prisma.transaction.findUnique({
         where: {
           id,
@@ -110,94 +106,106 @@ export class TransactionController {
         where: {
           id,
           event: {
-            userId: organizerId
-          }
+            userId: organizerId,
+          },
         },
         data: {
           status: status,
-          isDeleted: true
+          isDeleted: true,
         },
       });
 
-      if(updatedTransaction.status == "DONE"){
-        const userOwnTx = await prisma.user.findUnique ({
+      if (updatedTransaction.status == "DONE") {
+        const userOwnTx = await prisma.user.findUnique({
           where: {
-            id: updatedTransaction.userId
+            id: updatedTransaction.userId,
           },
           select: {
-            email: true
-          }
-        })
-        sendEmail(username_nodemailer, password_nodemailer, userOwnTx?.email as string, undefined, "accepted", updatedTransaction.id )
-      }else if(updatedTransaction.status == "REJECTED"){
+            email: true,
+          },
+        });
+        sendEmail(
+          username_nodemailer,
+          password_nodemailer,
+          userOwnTx?.email as string,
+          undefined,
+          "accepted",
+          updatedTransaction.id
+        );
+      } else if (updatedTransaction.status == "REJECTED") {
         await prisma.$transaction(async (trx) => {
-          const userOwnTx = await trx.user.findUnique ({
+          const userOwnTx = await trx.user.findUnique({
             where: {
-              id: updatedTransaction.userId
+              id: updatedTransaction.userId,
             },
             select: {
-              email: true
-            }
-          })
+              email: true,
+            },
+          });
 
           // return available seat
           await prisma.event.update({
             where: {
-              id: updatedTransaction.eventId
+              id: updatedTransaction.eventId,
             },
             data: {
               availableSeat: {
-                increment: updatedTransaction.totalTicket
-              }
-            }
-          })
-          
+                increment: updatedTransaction.totalTicket,
+              },
+            },
+          });
+
           // return coupon referral
-          if(updatedTransaction.couponReferralId){
+          if (updatedTransaction.couponReferralId) {
             await prisma.couponReferral.update({
               where: {
-                id: updatedTransaction.couponReferralId
+                id: updatedTransaction.couponReferralId,
               },
-              data: {isUsed: false}
-            })
+              data: { isUsed: false },
+            });
           }
-  
+
           // return point
-          if(updatedTransaction.pointId){
+          if (updatedTransaction.pointId) {
             const usedPoint = await prisma.point.findUnique({
               where: {
-                id: updatedTransaction.pointId
+                id: updatedTransaction.pointId,
               },
               select: {
-                totalPoint: true
-              }
-            })
-  
-            if(usedPoint){
+                totalPoint: true,
+              },
+            });
+
+            if (usedPoint) {
               await prisma.point.update({
                 where: {
-                  id: updatedTransaction.pointId
+                  id: updatedTransaction.pointId,
                 },
                 data: {
                   totalPoint: {
-                    increment: updatedTransaction.pointApplied
-                  }
-                }
-              })
+                    increment: updatedTransaction.pointApplied,
+                  },
+                },
+              });
             }
           }
 
           // send email
-          sendEmail(username_nodemailer, password_nodemailer, userOwnTx?.email as string, undefined, "rejected", updatedTransaction.id )
-        })        
+          sendEmail(
+            username_nodemailer,
+            password_nodemailer,
+            userOwnTx?.email as string,
+            undefined,
+            "rejected",
+            updatedTransaction.id
+          );
+        });
       }
 
       res.status(200).send({
         message: "success",
-        data: updatedTransaction
-      })
-
-      
+        data: updatedTransaction,
+      });
     } catch (error) {
       next(error);
     }
@@ -205,71 +213,84 @@ export class TransactionController {
 
   async createTransaction(req: Request, res: Response, next: NextFunction) {
     try {
-      const { eventId, totalPayment, totalTicket, couponReferralId, pointId, voucherId } = req.body;
+      const {
+        eventId,
+        totalPayment,
+        totalTicket,
+        couponReferralId,
+        pointId,
+        voucherId,
+      } = req.body;
+      console.log("ini dari body", req.body);
+
       const userId = req.user?.id;
-  
+
       // Retrieve user's total points
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { 
+        select: {
           point: {
             select: {
-              totalPoint: true
-            }
+              totalPoint: true,
+            },
           },
           couponsReferral: {
             select: {
               id: true,
               totalValue: true,
-              isUsed: true
-            }
+              isUsed: true,
+            },
           },
-         },
+        },
       });
 
       const event = await prisma.event.findUnique({
         where: {
-          id: eventId
+          id: eventId,
         },
         select: {
           price: true,
           availableSeat: true,
-        }
-      })
+        },
+      });
 
       let totalPaymentData = Number(event?.price) * Number(totalTicket);
       let pointApplied = 0; // Track points applied using correct field name
-  
+
       // Apply coupon referral if it exists
-      if (couponReferralId && user?.couponsReferral && !user.couponsReferral.isUsed) {
+      if (
+        couponReferralId &&
+        user?.couponsReferral &&
+        !user.couponsReferral.isUsed
+      ) {
         const couponValue = user.couponsReferral.totalValue;
         totalPaymentData -= couponValue;
-        
+
         // Set coupon referral as used
         await prisma.couponReferral.update({
           where: { id: couponReferralId },
           data: { isUsed: true },
         });
       }
-  
+
       // Apply points if they exist
-      if (pointId && user?.point?.totalPoint as number > 0) {
+      if (pointId && (user?.point?.totalPoint as number) > 0) {
         const pointsValue = user?.point?.totalPoint;
-        
+
         // Calculate points to be applied
         pointApplied = Math.min(pointsValue as number, totalPaymentData);
         totalPaymentData -= pointApplied;
-        
+
         // Update the user's points
         await prisma.point.update({
           where: { id: pointId },
           data: { totalPoint: (user?.point?.totalPoint ?? 0) - pointApplied },
         });
       }
-  
+
       // Create the transaction data
       const transactionData = {
-        totalTicket, 
+        totalTicket,
         status: StatusTransaction.WAITING_PAYMENT,
         userId: userId as string,
         eventId,
@@ -279,24 +300,25 @@ export class TransactionController {
         validUntilPaymentProof: new Date(Date.now() + 2 * 60 * 60 * 1000),
         validUntilConfirmation: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
         totalPayment: totalPaymentData,
-        pointApplied: pointApplied // Using correct field name
-      }
-  
+        pointApplied: pointApplied, // Using correct field name
+      };
+
       // Create the transaction
-      const newTransaction = await prisma.transaction.create({ data: transactionData });
-  
+      const newTransaction = await prisma.transaction.create({
+        data: transactionData,
+      });
+
       // Create associated payment proof record
       const newPayment = await prisma.paymentProof.create({
         data: { paymentPicture: null, id: newTransaction.id },
       });
-      
+
       res.status(201).json({
         message: "Transaction created successfully",
         transaction: newTransaction,
         paymentProof: newPayment,
         // pointApplied: pointApplied // Include points applied in the response
       });
-  
     } catch (error) {
       next(error);
     }
@@ -305,19 +327,19 @@ export class TransactionController {
   async getTransactionHistory(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user?.id;
-      const { name } = req.query
+      const { name } = req.query;
 
-      if(name) {
+      if (name) {
         const filteredData = await prisma.transaction.findMany({
           where: {
             event: {
               userId,
               name: {
                 contains: name as string,
-                mode: "insensitive"
+                mode: "insensitive",
               },
             },
-            isDeleted: true
+            isDeleted: true,
           },
           include: {
             event: {
@@ -331,8 +353,8 @@ export class TransactionController {
               select: {
                 name: true,
                 email: true,
-                id: true
-              }
+                id: true,
+              },
             },
             paymentProof: {
               select: {
@@ -340,20 +362,20 @@ export class TransactionController {
               },
             },
           },
-        })
+        });
 
         res.status(200).send({
           message: "success",
           length: filteredData.length,
           filteredData,
         });
-      }else{
+      } else {
         const data = await prisma.transaction.findMany({
           where: {
             event: {
               userId: userId,
             },
-            isDeleted: true
+            isDeleted: true,
           },
           include: {
             event: {
@@ -367,8 +389,8 @@ export class TransactionController {
               select: {
                 name: true,
                 email: true,
-                id: true
-              }
+                id: true,
+              },
             },
             paymentProof: {
               select: {
@@ -377,15 +399,13 @@ export class TransactionController {
             },
           },
         });
-  
+
         res.status(200).send({
           message: "success",
           length: data.length,
           data,
         });
       }
-
-      
     } catch (error) {
       next(error);
     }

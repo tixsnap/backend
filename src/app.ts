@@ -8,7 +8,12 @@ import { eventRouter } from "./routes/event.router";
 import { userEventRouter } from "./routes/userEvent.router";
 import { userRouter } from "./routes/user.router";
 import { transRouter } from "./routes/transaction.router";
-import { checkPointAndCouponReffExpired, checkTransactionExpired, checkVoucherExpired } from "./scheduler/cron";
+import { userTransRouter } from "./routes/userTransaction.router";
+import {
+  checkPointAndCouponReffExpired,
+  checkTransactionExpired,
+  checkVoucherExpired,
+} from "./scheduler/cron";
 import { voucherRouter } from "./routes/voucher.router";
 
 export class App {
@@ -19,9 +24,9 @@ export class App {
     this.configure();
     this.routes();
     this.handleError();
-    checkTransactionExpired() //cron transaction
-    checkPointAndCouponReffExpired() //cron user point
-    checkVoucherExpired()   //cron voucher
+    checkTransactionExpired(); //cron transaction
+    checkPointAndCouponReffExpired(); //cron user point
+    checkVoucherExpired(); //cron voucher
   }
 
   // Public getter to access the app instance
@@ -49,6 +54,7 @@ export class App {
     this.app.use("/organizer/events", eventRouter());
     this.app.use("/profile", userRouter());
     this.app.use("/tx", transRouter());
+    this.app.use("/usertx", userTransRouter());
     this.app.use("/organizer/vouchers", voucherRouter());
   }
 
