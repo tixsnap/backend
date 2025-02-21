@@ -145,7 +145,8 @@ export class UserController {
                             email: true,
                             point: {
                                 select: {
-                                    totalPoint: true
+                                    totalPoint: true,
+                                    isExpired: true
                                 }
 
                             }
@@ -160,6 +161,31 @@ export class UserController {
                 data: existProfile
             })
 
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async getCouponReff(req: Request, res: Response, next: NextFunction){
+        try {
+
+            const userId = req.user?.id
+            console.log("from userId", userId)
+            const couponReff = await prisma.couponReferral.findUnique({
+                where: {
+                    id: userId
+                },
+                select: {
+                    totalValue: true,
+                    isExpired: true
+                }
+            })
+
+            res.status(200).send({
+                message: "success",
+                data: couponReff
+            })
+            
         } catch (error) {
             next(error)
         }

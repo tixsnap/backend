@@ -40,7 +40,7 @@ export class EventController {
       let filter: any = {
         userId,
         isDeleted: false,
-        // ...dateFilter,
+        ...dateFilter,
       };
   
       if (name) {
