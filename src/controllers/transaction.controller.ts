@@ -8,92 +8,80 @@ export class TransactionController {
   async getTransaction(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user?.id;
-      const { name } = req.query
-
-      if(name) {
-        const filteredData = await prisma.transaction.findMany({
-          where: {
-            event: {
-              userId,
-              name: {
-                contains: name as string,
-                mode: "insensitive"
-              },
-            },
-            isDeleted: false  
-            
-          },
-          include: {
-            event: {
-              select: {
-                name: true,
-                price: true,
-                availableSeat: true,
-              },
-            },
-            user: {
-              select: {
-                name: true,
-                email: true,
-                id: true
-              }
-            },
-            paymentProof: {
-              select: {
-                paymentPicture: true,
-              },
-            },
-          },
-        })
-
-        res.status(200).send({
-          message: "success",
-          length: filteredData.length,
-          filteredData,
-        });
-      }else{
-        const data = await prisma.transaction.findMany({
-          where: {
-            event: {
-              userId: userId,
-            },
-            isDeleted: false
-          },
-          include: {
-            event: {
-              select: {
-                name: true,
-                price: true,
-                availableSeat: true,
-              },
-            },
-            user: {
-              select: {
-                name: true,
-                email: true,
-                id: true
-              }
-            },
-            paymentProof: {
-              select: {
-                paymentPicture: true,
-              },
-            },
-          },
-        });
+      const { name, year, month, day } = req.query;
+      console.log(name)
   
-        res.status(200).send({
-          message: "success",
-          length: data.length,
-          data,
-        });
+      let dateFilter: any = {};
+  
+      if (year && month && day) {
+        const startDate = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+        const endDate = new Date(`${year}-${month}-${day}T23:59:59.999Z`);
+        dateFilter.createdAt = { gte: startDate, lte: endDate };
+      } else if (year && month) {
+        const startDate = new Date(`${year}-${month}-01T00:00:00.000Z`);
+        const endDate = new Date(`${year}-${month}-31T23:59:59.999Z`);
+        dateFilter.createdAt = { gte: startDate, lte: endDate };
+      } else if (year) {
+        const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
+        const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
+        dateFilter.createdAt = { gte: startDate, lte: endDate };
       }
+  
+      let filter: any = {
+        event: {
+          userId,
+        },
+        isDeleted: false,
+        ...dateFilter,
+      };
+  
+      if (name) {
+        filter.event.name = { contains: name as string, mode: "insensitive" };
+      }
+  
+      const data = await prisma.transaction.findMany({
+        where: filter,
+        include: {
+          event: {
+            select: {
+              name: true,
+              price: true,
+              availableSeat: true,
+            },
+          },
+          user: {
+            select: {
+              name: true,
+              email: true,
+              id: true,
+            },
+          },
+          paymentProof: {
+            select: {
+              paymentPicture: true,
+            },
+          },
+        },
+      });
 
-      
+      const totalRevenue = await prisma.transaction.aggregate({
+         _sum: {
+          totalPayment: true
+         },
+         where: filter  
+      })
+  
+      res.status(200).send({
+        message: "success",
+        length: data.length,
+        data,
+        totalRevenue
+      });
     } catch (error) {
       next(error);
     }
   }
+
 
   async setTransactionStatus(req: Request, res: Response, next: NextFunction) {
     try {

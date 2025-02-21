@@ -11,6 +11,7 @@ export const userRouter = () => {
   router.post("/avatar", verifyToken, uploader().single("image"), userController.uploadAvatar);
   router.delete("/avatar", verifyToken, userController.removeAvatar);
   router.get("/", verifyToken, userController.getProfileId)
+  router.get("/coupon-refferal", verifyToken, userController.getCouponReff)
 
   return router;
 };

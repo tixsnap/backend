@@ -4,7 +4,8 @@ import { password_nodemailer, prisma, username_nodemailer } from "../config";
 
 // cronjob, check transaction if expired auto rejected
 export const checkTransactionExpired = () => {
-  cron.schedule("0 * * * *", async () => {
+  // cron.schedule("0 * * * *", async () => {
+    cron.schedule("*/10 * * * * *", async () => {
     console.log("Checking for expired transactions...");
     try {
       const expiredTransactions = await prisma.transaction.findMany({
@@ -45,7 +46,8 @@ export const checkTransactionExpired = () => {
 };
 
 export const checkPointAndCouponReffExpired = () => {
-  cron.schedule("0 * * * *", async () => {
+  // cron.schedule("0 * * * *", async () => {
+    cron.schedule("*/10 * * * * *", async () => {
   console.log("Checking for expired points...");
     try {
       const userPoints = await prisma.point.findMany({
@@ -88,7 +90,8 @@ export const checkPointAndCouponReffExpired = () => {
 export const checkVoucherExpired = () => {
   try {
 
-    cron.schedule("0 * * * *", async () => {
+    // cron.schedule("0 * * * *", async () => {
+      cron.schedule("*/10 * * * * *", async () => {
       console.log("Checking for expired points...");
       try {
 

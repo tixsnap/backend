@@ -10,6 +10,7 @@ import { userRouter } from "./routes/user.router";
 import { transRouter } from "./routes/transaction.router";
 import { checkPointAndCouponReffExpired, checkTransactionExpired, checkVoucherExpired } from "./scheduler/cron";
 import { voucherRouter } from "./routes/voucher.router";
+import { selectionRouter } from "./routes/selection.router";
 
 export class App {
   private app: Application;
@@ -50,6 +51,7 @@ export class App {
     this.app.use("/profile", userRouter());
     this.app.use("/tx", transRouter());
     this.app.use("/organizer/vouchers", voucherRouter());
+    this.app.use("/selection", selectionRouter());
   }
 
   // handler configuration
