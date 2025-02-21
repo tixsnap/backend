@@ -15,6 +15,7 @@ import {
   checkVoucherExpired,
 } from "./scheduler/cron";
 import { voucherRouter } from "./routes/voucher.router";
+import { userReviewRouter } from "./routes/userReview.router";
 
 export class App {
   private app: Application;
@@ -56,6 +57,7 @@ export class App {
     this.app.use("/tx", transRouter());
     this.app.use("/usertx", userTransRouter());
     this.app.use("/organizer/vouchers", voucherRouter());
+    this.app.use("/review", userReviewRouter());
   }
 
   // handler configuration

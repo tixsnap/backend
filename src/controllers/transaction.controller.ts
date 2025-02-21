@@ -221,7 +221,6 @@ export class TransactionController {
         pointId,
         voucherId,
       } = req.body;
-      console.log("ini dari body", req.body);
 
       const userId = req.user?.id;
 
